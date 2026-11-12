@@ -1,0 +1,54 @@
+# Секреты и ключи
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+credentials*.json
+token*.json
+client_secret*.json
+
+# Временные файлы и кэши
+*.tmp
+*.temp
+*.bak
+*.swp
+~$*
+.cache/
+tmp/
+temp/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ipynb_checkpoints/
+node_modules/
+dist/
+build/
+.playwright-mcp/
+
+# Системные и IDE
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+.claude/
+
+# Полные копии чужих страниц: только локально (репозиторий публичный)
+research/source_snapshots/
+
+# Тяжёлые технические артефакты
+*.zip
+*.7z
+*.rar
+*.psd
+*.aep
+*.prproj
+*.blend
+*.mov
+*.avi
+*.mkv
+*.wav
+media/raw/
