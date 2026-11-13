@@ -16,7 +16,7 @@ import math
 import re
 
 SANS = "TildaSans"
-MONO = "'JetBrains Mono','Roboto Mono',Consolas,Menlo,monospace"
+MONO = "TildaSans"  # моноширинных шрифтов в библиотеке Free нет: телеметрия — TildaSans с разрядкой
 
 CARBON = "#0b0d10"
 PANEL = "#12151b"
@@ -112,6 +112,7 @@ class Block:
 
     def text(self, x, y, w, html, fs=18, lh=1.55, fw=400, color=SILVER, font=SANS, ls=0, align=None,
              layer="text", mobile=None, desktop=True, opacity=None, **anim) -> dict:
+        html = re.sub(r"(\d) (\d{3})", r"\1&nbsp;\2", html)
         h = estimate_height(html, w, fs, lh)
         return self._base("text", x, y, w, h, layer, mobile, desktop, text=html, fontsize=str(fs),
                           lineheight=str(lh), fontweight=str(fw), color=color, fontfamily=font,
