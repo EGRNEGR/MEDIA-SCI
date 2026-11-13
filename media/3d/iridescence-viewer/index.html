@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Iridescence · условная 3D-реконструкция · Несуществующий гардероб</title>
+<style>
+  :root {
+    --bg: #0B0D10;
+    --panel: #12151B;
+    --line: rgba(255, 255, 255, 0.08);
+    --text: #F4F6F9;
+    --muted: #7A828E;
+    --accent: #38BDF8;
+    --mono: "JetBrains Mono", "IBM Plex Mono", Consolas, monospace;
+    --sans: Inter, Manrope, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--sans); }
+  body.transparent { background: transparent; }
+  canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+  canvas:active { cursor: grabbing; }
+  .hud { position: fixed; pointer-events: none; font: 500 12px/1.5 var(--mono); font-variant-numeric: tabular-nums; letter-spacing: 0.04em; color: var(--muted); }
+  .hud b { color: var(--accent); font-weight: 500; }
+  .tl { top: 22px; left: 26px; }
+  .tr { top: 22px; right: 26px; text-align: right; }
+  .bl { bottom: 22px; left: 26px; }
+  .br { bottom: 22px; right: 26px; text-align: right; max-width: 320px; }
+  .title { margin-top: 8px; font: 600 22px/1.15 var(--sans); letter-spacing: 0; color: var(--text); }
+  .title span { color: var(--muted); }
+  .live::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 6px; border-radius: 50%; background: #22C55E; vertical-align: 1px; }
+  .reticle { position: fixed; width: 18px; height: 18px; border: 0 solid rgba(255, 255, 255, 0.18); pointer-events: none; }
+  .reticle.a { top: 12px; left: 12px; border-top-width: 1px; border-left-width: 1px; }
+  .reticle.b { top: 12px; right: 12px; border-top-width: 1px; border-right-width: 1px; }
+  .reticle.c { bottom: 12px; left: 12px; border-bottom-width: 1px; border-left-width: 1px; }
+  .reticle.d { bottom: 12px; right: 12px; border-bottom-width: 1px; border-right-width: 1px; }
+  .fallback { position: fixed; inset: 0; display: none; place-items: center; padding: 24px; text-align: center; font: 400 15px/1.5 var(--sans); color: var(--muted); }
+  body.nogl .fallback { display: grid; }
+  body.frame .hud, body.frame .reticle, body.nohud .hud, body.nohud .reticle { display: none; }
+  @media (max-width: 600px) {
+    .tr, .br { display: none; }
+    .title { font-size: 18px; }
+  }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<div class="reticle a"></div><div class="reticle b"></div><div class="reticle c"></div><div class="reticle d"></div>
+<div class="hud tl"><b>/03</b> · 3D-СЦЕНА<div class="title">Iridescence<br><span>условная реконструкция</span></div></div>
+<div class="hud tr">ROT <span id="rot">000</span>°<br>MAY 2019 · $9 500<br><span class="live">LIVE</span></div>
+<div class="hud bl">Потяните, чтобы повернуть · колесо — масштаб</div>
+<div class="hud br">Стилизация по описанию платья Iridescence [8; 9]. Это не 3D-модель The Fabricant.</div>
+<div class="fallback">Браузер не поддерживает WebGL. Откройте страницу в актуальной версии Chrome, Edge, Firefox или Safari.</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+// Параметры адресной строки:
+//   ?frame=N&frames=12  — статичный кадр турникета (угол N·360°/frames) для экспорта в Tilda
+//   ?transparent=1      — прозрачный фон вместо #0B0D10
+//   ?hud=0              — скрыть телеметрию (для встраивания)
+const query = new URLSearchParams(location.search);
+const frameMode = query.has('frame');
+const frameCount = Math.max(1, parseInt(query.get('frames') || '12', 10));
+const transparent = query.get('transparent') === '1';
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+document.body.classList.toggle('frame', frameMode);
+document.body.classList.toggle('transparent', transparent);
+document.body.classList.toggle('nohud', query.get('hud') === '0');
+
+const probe = document.createElement('canvas');
+if (!(probe.getContext('webgl2') || probe.getContext('webgl'))) {
+  document.body.classList.add('nogl');
+  throw new Error('WebGL недоступен');
+}
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: transparent, preserveDrawingBuffer: frameMode });
+renderer.setPixelRatio(frameMode ? 1 : Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.92;
+renderer.setClearColor(0x0B0D10, transparent ? 0 : 1);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+const camera = new THREE.PerspectiveCamera(32, innerWidth / innerHeight, 0.1, 50);
+camera.position.set(0, 1.05, 4.6);
+
+scene.add(new THREE.HemisphereLight(0xF4F6F9, 0x0B0D10, 0.35));
+const keyLight = new THREE.DirectionalLight(0xffffff, 1.6);
+keyLight.position.set(2.5, 3.2, 2.6);
+scene.add(keyLight);
+const rimLight = new THREE.DirectionalLight(0x38BDF8, 2.4);
+rimLight.position.set(-3, 2.2, -2.6);
+scene.add(rimLight);
+
+const turntable = new THREE.Group();
+scene.add(turntable);
+
+// Силуэт платья-комбинезона: профиль (радиус, высота) от подола к линии декольте.
+const profile = new THREE.CatmullRomCurve3([
+  [0.62, 0.06], [0.50, 0.30], [0.38, 0.56], [0.27, 0.80], [0.205, 0.98],
+  [0.15, 1.10], [0.165, 1.22], [0.195, 1.34], [0.175, 1.45], [0.14, 1.53],
+].map(([r, y]) => new THREE.Vector3(r, y, 0)));
+
+const SEGMENTS = 144;
+const ROWS = 110;
+const ring = profile.getSpacedPoints(ROWS);
+const cols = SEGMENTS + 1;
+const vertexCount = cols * (ROWS + 1);
+const positions = new Float32Array(vertexCount * 3);
+const uvs = new Float32Array(vertexCount * 2);
+const indices = [];
+for (let row = 0; row <= ROWS; row++) {
+  for (let col = 0; col <= SEGMENTS; col++) {
+    const i = row * cols + col;
+    uvs[i * 2] = col / SEGMENTS;
+    uvs[i * 2 + 1] = row / ROWS;
+    if (row < ROWS && col < SEGMENTS) {
+      const a = i, b = i + 1, c = i + cols, d = i + cols + 1;
+      indices.push(a, c, b, b, c, d);
+    }
+  }
+}
+const dressGeometry = new THREE.BufferGeometry();
+dressGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+dressGeometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+dressGeometry.setIndex(indices);
+
+// Складки и покачивание подола: чем ниже талии, тем сильнее волна.
+function drapeDress(time) {
+  for (let row = 0; row <= ROWS; row++) {
+    const { x: radius, y } = ring[row];
+    const skirt = Math.pow(THREE.MathUtils.clamp((1.10 - y) / 1.04, 0, 1), 1.35);
+    const swayX = skirt * skirt * 0.045 * Math.sin(time * 0.9);
+    const swayZ = skirt * skirt * 0.03 * Math.cos(time * 0.7);
+    for (let col = 0; col <= SEGMENTS; col++) {
+      const theta = (col / SEGMENTS) * Math.PI * 2;
+      const folds = 0.085 * Math.sin(7 * theta + 0.6 * Math.sin(time * 0.8 + y * 2.0))
+                  + 0.035 * Math.sin(13 * theta - time * 1.1 + y * 3.0);
+      const bodice = 0.012 * Math.sin(5 * theta + y * 9.0);
+      // Шлейф сзади (z < 0) делает силуэт асимметричным: поворот читается по кадрам.
+      const train = Math.pow(Math.max(0, -Math.sin(theta)), 2) * skirt * skirt;
+      const r = radius * (1 + skirt * folds + (1 - skirt) * bodice + 0.38 * train);
+      const i = (row * cols + col) * 3;
+      positions[i] = r * Math.cos(theta) + swayX;
+      positions[i + 1] = Math.max(0.035, y - 0.05 * train * skirt);
+      positions[i + 2] = r * Math.sin(theta) + swayZ;
+    }
+  }
+  dressGeometry.attributes.position.needsUpdate = true;
+  dressGeometry.computeVertexNormals();
+}
+
+const dressMaterial = new THREE.MeshPhysicalMaterial({
+  color: 0xA9B9CE,
+  metalness: 0.45,
+  roughness: 0.14,
+  clearcoat: 1,
+  clearcoatRoughness: 0.06,
+  iridescence: 1,
+  iridescenceIOR: 2.0,
+  iridescenceThicknessRange: [100, 1150],
+  transmission: 0.18,
+  thickness: 0.3,
+  transparent: true,
+  opacity: 0.95,
+  side: THREE.DoubleSide,
+});
+const dress = new THREE.Mesh(dressGeometry, dressMaterial);
+turntable.add(dress);
+
+// Бретель на одно плечо — второй ориентир для зрителя.
+const strap = new THREE.Mesh(
+  new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-0.07, 1.5, 0.12), new THREE.Vector3(-0.14, 1.575, 0.07),
+    new THREE.Vector3(-0.175, 1.6, -0.01), new THREE.Vector3(-0.13, 1.565, -0.1), new THREE.Vector3(-0.06, 1.49, -0.13),
+  ]), 48, 0.011, 12, false),
+  dressMaterial,
+);
+turntable.add(strap);
+
+const wire = new THREE.Mesh(dressGeometry, new THREE.MeshBasicMaterial({
+  color: 0x38BDF8, wireframe: true, transparent: true, opacity: 0.07, depthWrite: false,
+}));
+wire.scale.setScalar(1.003);
+turntable.add(wire);
+
+// Светящийся спиральный шов от талии к подолу (статичен, задан по базовому силуэту).
+function seamPath() {
+  const points = [];
+  for (let k = 0; k <= 80; k++) {
+    const t = k / 80;
+    const y = THREE.MathUtils.lerp(1.08, 0.16, t);
+    const theta = Math.PI * (0.15 + 1.0 * t);
+    const skirt = THREE.MathUtils.clamp((1.10 - y) / 1.04, 0, 1);
+    const r = radiusAt(y) * (0.99 + 0.06 * Math.pow(skirt, 1.35));
+    points.push(new THREE.Vector3(r * Math.cos(theta), y, r * Math.sin(theta)));
+  }
+  return new THREE.CatmullRomCurve3(points);
+}
+
+// Подставка-манекен и шкала турникета на полу.
+const metal = new THREE.MeshStandardMaterial({ color: 0x1C212B, metalness: 0.8, roughness: 0.35 });
+const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 1.5, 16), metal);
+pole.position.y = 0.75;
+turntable.add(pole);
+const base = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.32, 0.03, 64), metal);
+base.position.y = 0.015;
+scene.add(base);
+
+const hudLine = new THREE.LineBasicMaterial({ color: 0x38BDF8, transparent: true, opacity: 0.35 });
+const faintLine = new THREE.LineBasicMaterial({ color: 0xF4F6F9, transparent: true, opacity: 0.08 });
+function circle(radius, material) {
+  const points = new THREE.EllipseCurve(0, 0, radius, radius).getSpacedPoints(160)
+    .map((p) => new THREE.Vector3(p.x, 0.002, p.y));
+  return new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), material);
+}
+scene.add(circle(0.95, hudLine), circle(1.35, faintLine), circle(1.75, faintLine));
+const ticks = [];
+for (let k = 0; k < 12; k++) {
+  const a = (k / 12) * Math.PI * 2;
+  const r0 = 0.95, r1 = k % 3 === 0 ? 1.1 : 1.02;
+  ticks.push(new THREE.Vector3(r0 * Math.cos(a), 0.002, r0 * Math.sin(a)), new THREE.Vector3(r1 * Math.cos(a), 0.002, r1 * Math.sin(a)));
+}
+turntable.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(ticks), hudLine));
+turntable.add(new THREE.Mesh(new THREE.TubeGeometry(seamPath(), 200, 0.0045, 8, false), new THREE.MeshBasicMaterial({ color: 0x38BDF8 })));
+
+// Кольцо сканирования повторяет силуэт по высоте.
+function radiusAt(y) {
+  for (let row = 0; row < ROWS; row++) {
+    const p = ring[row], q = ring[row + 1];
+    if (y >= Math.min(p.y, q.y) && y <= Math.max(p.y, q.y)) {
+      return THREE.MathUtils.lerp(p.x, q.x, (y - p.y) / ((q.y - p.y) || 1));
+    }
+  }
+  return ring[ROWS].x;
+}
+const scanRing = new THREE.Mesh(
+  new THREE.TorusGeometry(1, 0.0035, 8, 160),
+  new THREE.MeshBasicMaterial({ color: 0x38BDF8, transparent: true, opacity: 0.6 }),
+);
+scanRing.rotation.x = Math.PI / 2;
+scene.add(scanRing);
+function placeScan(time) {
+  const y = 0.12 + (0.5 + 0.5 * Math.sin(time * 0.6)) * 1.36;
+  const skirt = THREE.MathUtils.clamp((1.10 - y) / 1.04, 0, 1);
+  scanRing.position.y = y;
+  scanRing.scale.setScalar(radiusAt(y) * (1.14 + 0.1 * skirt));
+}
+
+// Частицы-«данные» с фиксированным зерном, чтобы кадры экспорта совпадали между прогонами.
+let seed = 20190514;
+const random = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+const particleCount = 260;
+const particleBase = new Float32Array(particleCount * 3);
+for (let k = 0; k < particleCount; k++) {
+  const a = random() * Math.PI * 2, r = 0.7 + random() * 1.1;
+  particleBase.set([r * Math.cos(a), random() * 1.9, r * Math.sin(a)], k * 3);
+}
+const particleGeometry = new THREE.BufferGeometry();
+particleGeometry.setAttribute('position', new THREE.BufferAttribute(particleBase.slice(), 3));
+const particles = new THREE.Points(particleGeometry, new THREE.PointsMaterial({
+  color: 0x38BDF8, size: 0.012, transparent: true, opacity: 0.55, depthWrite: false,
+}));
+turntable.add(particles);
+function liftParticles(time) {
+  const p = particleGeometry.attributes.position.array;
+  for (let k = 0; k < particleCount; k++) {
+    p[k * 3 + 1] = (particleBase[k * 3 + 1] + time * 0.05) % 1.9;
+  }
+  particleGeometry.attributes.position.needsUpdate = true;
+}
+
+const target = new THREE.Vector3(0, 0.82, 0);
+camera.lookAt(target);
+
+function resize() {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+}
+addEventListener('resize', resize);
+
+if (frameMode) {
+  // Детерминированный кадр: одна поза ткани, меняется только угол поворота.
+  const POSE_TIME = 1.2;
+  drapeDress(POSE_TIME);
+  placeScan(POSE_TIME);
+  liftParticles(POSE_TIME);
+  window.__renderFrame = (index) => {
+    turntable.rotation.y = -(index / frameCount) * Math.PI * 2;
+    renderer.render(scene, camera);
+    return renderer.domElement.toDataURL(query.get('format') === 'jpeg' ? 'image/jpeg' : 'image/png', 0.9);
+  };
+  window.__renderFrame(parseInt(query.get('frame'), 10) || 0);
+  window.__frameReady = true;
+} else {
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.target.copy(target);
+  controls.enableDamping = true;
+  controls.enablePan = false;
+  controls.minDistance = 2.6;
+  controls.maxDistance = 7;
+  controls.minPolarAngle = 0.95;
+  controls.maxPolarAngle = 1.72;
+  controls.autoRotate = !reduceMotion;
+  controls.autoRotateSpeed = 1.1;
+  const rotLabel = document.getElementById('rot');
+  const clock = new THREE.Clock();
+  renderer.setAnimationLoop(() => {
+    const time = reduceMotion ? 1.2 : clock.getElapsedTime();
+    drapeDress(time);
+    placeScan(time);
+    liftParticles(time);
+    controls.update();
+    const deg = (THREE.MathUtils.radToDeg(controls.getAzimuthalAngle()) + 360) % 360;
+    rotLabel.textContent = String(Math.round(deg) % 360).padStart(3, '0');
+    renderer.render(scene, camera);
+  });
+}
+</script>
+</body>
+</html>
