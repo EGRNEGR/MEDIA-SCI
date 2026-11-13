@@ -60,9 +60,9 @@ def fan(i: int, n: int = 3, delay_step=0.12) -> dict:
 
 # --------------------------------------------------------------------------- ZB01 герой
 def zb01() -> Block:
-    b = Block("ZB01", 860, 1250)
+    b = Block("ZB01", 900, 1300)
     for x in (0, 300, 600, 900, 1200):
-        b.shape(x, 0, 1, 860, bg="#15181c", layer="hairline", mobile="hide")
+        b.shape(x, 0, 1, 900, bg="#15181c", layer="hairline", mobile="hide")
     b.text(0, 28, 400, bold("НЕСУЩЕСТВУЮЩИЙ") + " ГАРДЕРОБ", fs=15, lh=1.3, ls=1.5, layer="brand",
            mobile={"x": 10, "y": 24, "w": 300, "fs": 13})
     nav = [("/01 ФОРМАТЫ", "ZB02", 430), ("/02 ХРОНОЛОГИЯ", "ZB04", 545), ("/03 РОССИЯ", "ZB06", 690),
@@ -105,7 +105,7 @@ def zb01() -> Block:
                ("65 000+", "посетителей Московской недели моды 2026 года, где работала ИИ-примерочная GigaChat "
                            "[37; 38]")]
     for i, (num, label) in enumerate(metrics):
-        b.panel_text(i * 300, 712, 280, [(num, "metric"), (label, "small")], pad=20, gap=6, min_h=128,
+        b.panel_text(i * 300, 712, 280, [(num, "metric"), (label, "small")], pad=20, gap=6, min_h=160,
                      mobile={"x": 10 + (i % 2) * 235, "y": 930 + (i // 2) * 160, "w": 225}, layer=f"metric{i + 1}",
                      anim_panel=Block.basic("fadeinup", 0.7, 0.2 + 0.1 * i, 40))
     return b
@@ -189,14 +189,14 @@ def zb03() -> Block:
     for i, (label, body) in enumerate(facts):
         s = (0, 450, 900, 1350)[i]
         if i == 0:
-            anim = pin(y)
+            steps = [scroll_step(0), scroll_step(P, my=P)]
         else:
             steps = [scroll_step(0, my=24, op=0), scroll_step(s, my=s + 24, op=0),
                      scroll_step(120, my=s + 120, op=1), scroll_step(P - s - 120, my=P, op=1)]
-            anim = Block.sbs("scroll", steps, trg="0", offset=y)
+        anim = Block.sbs("scroll", steps, trg="0", offset=y)
         _, _, h, mh = b.panel_text(880, y, 300, [(label, "mono"), (body, "small")], pad=18, gap=6,
                                    mobile={"x": 10, "y": my, "w": 460}, layer=f"fact{i + 1}", anim_panel=anim)
-        y += h + 14
+        y += h + 22
         my += mh + 14
     b.mobile_height = my + 30
     return b
@@ -290,8 +290,11 @@ def zb05() -> Block:
     for i, (label, title, body, stats) in enumerate(eras):
         items = [(cyan(label), "mono"), (title, "h3"), (body, "small")]
         for num, cap in stats:
+            if num == "ОГОВОРКА":
+                items.append(("ОГОВОРКА: " + cap, "warn"))
+                continue
             items.append((num, "metric"))
-            items.append((cap, "warn" if num == "ОГОВОРКА" else "small"))
+            items.append((cap, "small"))
         _, _, h, mh = b.panel_text(i * 400, 300, 380, items, pad=26, gap=10, min_h=620,
                                    mobile={"x": 10, "y": my, "w": 460}, layer=f"era{i + 1}", anim_panel=fan(i))
         my += mh + 16
@@ -409,7 +412,7 @@ def zb07() -> Block:
 
 # --------------------------------------------------------------------------- ZB08 экология
 def zb08() -> Block:
-    b = Block("ZB08", 1120, 2100)
+    b = Block("ZB08", 1260, 2100)
     for n in range(6):
         rot = (-18, 12, -9, 9, -12, 18)[n]
         mx = (-120, 80, -40, 40, -80, 120)[n]
@@ -437,8 +440,8 @@ def zb08() -> Block:
                      "Великобритания [25]")]
     for i, (num, label) in enumerate(stats):
         x = 620 + (i % 2) * 290
-        y = 500 + (i // 2) * 128
-        b.panel_text(x, y, 270, [(num, "metric"), (label, "small")], pad=18, gap=4, min_h=116,
+        y = 500 + (i // 2) * 150
+        b.panel_text(x, y, 270, [(num, "metric"), (label, "small")], pad=18, gap=4, min_h=136,
                      mobile={"x": 10 + (i % 2) * 235, "y": my + (i // 2) * 150, "w": 225}, layer=f"stat{i + 1}",
                      anim_panel=Block.basic("fadeinup", 0.6, 0.08 * i, 30))
     my += 3 * 150 + 10
@@ -446,7 +449,7 @@ def zb08() -> Block:
               "пошив и покупку реальной вещи. Против неё работают энергия серверов, обучение и работа нейросетей, "
               "хранение данных и наши устройства. Цифровые прототипы способны заменить часть физических образцов: "
               "шведский бренд Atacac визуализирует модели в CLO 3D и принимает предзаказы до пошива [29].", "body")]
-    _, _, _, mh = b.panel_text(0, 900, 1160, caveat, pad=24, gap=8, border=WARN, mobile={"x": 10, "y": my, "w": 460},
+    _, _, _, mh = b.panel_text(0, 1000, 1160, caveat, pad=24, gap=8, border=WARN, mobile={"x": 10, "y": my, "w": 460},
                                layer="caveat", anim_panel=Block.basic("fadeinup", 0.7, 0, 30))
     b.mobile_height = my + mh + 40
     return b
@@ -494,7 +497,8 @@ def zb10() -> Block:
     sub = "Без регистрации. Ответы нигде не сохраняются — это проверка для себя."
     b.text(0, 220, 760, sub, fs=15, lh=1.45, color=MUTED, mobile={"x": 10, "y": my + 12, "w": 460, "fs": 14})
     my += 12 + estimate_height(sub, 460, 14, 1.45) + 24
-    reveal = [time_step(0, my=12, op=0), time_step(350, ea="easeOut")]
+    off = 2000  # артборд обрезает всё за краем: до клика вердикт не виден
+    reveal = [time_step(0, mx=-off, my=12, op=0), time_step(350, mx=-off, ea="easeOut")]
     for i, (q, answer, why) in enumerate(QUIZ):
         y = 260 + 230 * i
         b.shape(0, y, 1160, 210, bg=PANEL, border=LINE_PANEL, radius=16, layer=f"row{i + 1}",
@@ -509,11 +513,13 @@ def zb10() -> Block:
         verdict = "ЭТО МИФ" if answer == "myth" else "ЭТО ФАКТ"
         for ok, btn in ((False, wrong_btn), (True, right_btn)):
             anim = Block.sbs("click", reveal, triggers=[btn["elem_id"]])
-            b.shape(700, y + 96, 440, 100, bg=PANEL, border=OK if ok else WARN, radius=12,
-                    layer="v-right" if ok else "v-wrong", mobile={"x": 28, "y": my + 200, "w": 424, "h": 140}, **anim)
+            b.shape(700 + off, y + 96, 440, 100, bg=PANEL, border=OK if ok else WARN, radius=12,
+                    layer="v-right" if ok else "v-wrong",
+                    mobile={"x": 28 + off, "y": my + 200, "w": 424, "h": 140, "steps": reveal}, **anim)
             head_txt = ("ВЕРНО · " if ok else "НЕ СОВСЕМ · ") + verdict
-            b.text(718, y + 108, 404, f'<span style="color: {OK if ok else WARN};">{head_txt}</span><br>{why}', fs=13,
-                   lh=1.4, layer="verdict", mobile={"x": 44, "y": my + 212, "w": 392, "fs": 13}, **anim)
+            b.text(718 + off, y + 108, 404, f'<span style="color: {OK if ok else WARN};">{head_txt}</span><br>{why}',
+                   fs=13, lh=1.4, layer="verdict",
+                   mobile={"x": 44 + off, "y": my + 212, "w": 392, "fs": 13, "steps": reveal}, **anim)
         my += 360 + 16
     b.mobile_height = my + 40
     return b
