@@ -512,7 +512,7 @@ def zb10() -> Block:
         right_btn, wrong_btn = (myth, fact) if answer == "myth" else (fact, myth)
         verdict = "ЭТО МИФ" if answer == "myth" else "ЭТО ФАКТ"
         for ok, btn in ((False, wrong_btn), (True, right_btn)):
-            anim = Block.sbs("click", reveal, triggers=[btn["elem_id"]])
+            anim = Block.sbs("click", reveal, loop="once", triggers=[btn["elem_id"]])
             b.shape(700 + off, y + 96, 440, 100, bg=PANEL, border=OK if ok else WARN, radius=12,
                     layer="v-right" if ok else "v-wrong",
                     mobile={"x": 28 + off, "y": my + 200, "w": 424, "h": 140, "steps": reveal}, **anim)

@@ -77,6 +77,23 @@ def time_step(ti=0, mx=0, my=0, sc=1, op=1, ro=0, ea="", dt=0) -> dict:
             "ro": str(ro), "ti": str(round(ti)), "ea": ea or "0", "dt": str(round(dt))}
 
 
+def normalize_steps(steps: list[dict]) -> list[dict]:
+    """Move, Rotate и Scale в пошаговой анимации считаются от нулевого шага (проверено в превью 13.11.2026).
+
+    Если первый шаг задаёт стартовую позу, перед ним ставится нейтральный шаг, а сама поза
+    становится мгновенным переходом (длительность 0).
+    """
+    first = steps[0]
+    posed = any(float(first[k]) != 0 for k in ("mx", "my", "ro")) or float(first["sx"]) != 1
+    if not posed:
+        return steps
+    neutral = dict(first, mx="0", my="0", ro="0", sx="1", sy="1")
+    for key in ("ti", "dt", "di", "dd"):
+        if key in neutral:
+            neutral[key] = "0"
+    return [neutral] + steps
+
+
 def scale_steps(steps: list[dict], k: float) -> list[dict]:
     out = []
     for s in steps:
@@ -212,6 +229,7 @@ class Block:
 
     @staticmethod
     def sbs(event, steps, trg="0", offset=0, loop="", triggers=None) -> dict:
+        steps = normalize_steps(steps)
         d = {"sbsevent": event, "sbsopts": steps_json(steps), "sbsloop": loop}
         if event in ("scroll", "intoview", "blockintoview"):
             d.update(sbstrg=trg, sbstrgofst=str(round(offset)))
@@ -253,7 +271,7 @@ class Block:
                     if "fs" in mobile:
                         e[f"fontsize-res-{bp}"] = str(max(10, round(mobile["fs"] * s)))
                     if mobile.get("steps") is not None:
-                        e[f"sbsopts-res-{bp}"] = steps_json(scale_steps(mobile["steps"], s))
+                        e[f"sbsopts-res-{bp}"] = steps_json(scale_steps(normalize_steps(mobile["steps"]), s))
                 if el["hidden"] == "y":
                     e["hidden-res-640"] = "n"
             code[str(i)] = e
