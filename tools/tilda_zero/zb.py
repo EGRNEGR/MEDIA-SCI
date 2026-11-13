@@ -269,7 +269,7 @@ class Block:
                     if "h" in mobile:
                         e[f"height-res-{bp}"] = str(round(mobile["h"] * s))
                     if "fs" in mobile:
-                        e[f"fontsize-res-{bp}"] = str(max(10, round(mobile["fs"] * s)))
+                        e[f"fontsize-res-{bp}"] = str(round(mobile["fs"] * s, 1))  # пропорционально: дальше работает автомасштаб
                     if mobile.get("steps") is not None:
                         e[f"sbsopts-res-{bp}"] = steps_json(scale_steps(normalize_steps(mobile["steps"]), s))
                 if el["hidden"] == "y":
@@ -285,7 +285,7 @@ class Block:
             "ab_bgcolor": self.bg,
             "ab_filteropacity": "0.5", "ab_filteropacity2": "0.5",
             "ab_bgattachment": "scroll", "ab_bgposition": "center center",
-            "ab_valign": "center", "ab_upscale": "grid", "ab_ovrflw": "hidden",
+            "ab_valign": "center", "ab_upscale": "grid", "ab_upscale-res-640": "window", "ab_ovrflw": "hidden",
             "ab_screens": "320,480,640,960,1200",
             "meta": {"feeds": {"version": "1", "render": {}},
                      "migrations": {"elements": {"form": 3, "feeds-tile": 1}, "artboard": {"screens": 1}}},
