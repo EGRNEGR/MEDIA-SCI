@@ -54,7 +54,7 @@ def bold(text: str) -> str:
     return f"<strong>{text}</strong>"
 
 
-def estimate_height(text: str, width: float, fontsize: float, lineheight: float, char_k: float = 0.56) -> int:
+def estimate_height(text: str, width: float, fontsize: float, lineheight: float, char_k: float = 0.6) -> int:
     """Грубая оценка высоты текста: важна только для раскладки соседних слоёв."""
     plain = re.sub(r"<br\s*/?>", "\n", text)
     plain = re.sub(r"<[^>]+>", "", plain)
